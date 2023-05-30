@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/informasi.dart';
 import 'package:flutter_application_1/list.dart';
+import 'package:flutter_application_1/login.dart';
 
 class EmployeeAttendancePage extends StatefulWidget {
   @override
@@ -26,15 +28,15 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
     'Training Room',
   ];
 
-  Map<int, bool> attendanceStatus =
+  Map<int, String> attendanceStatus =
       {}; // Map to store attendance status for each employee
   bool isRoomListVisible = false;
   int selectedRoomIndex = 0; // Selected room index
   String selectedRoomName = 'Select Room'; // Selected room name
 
-  void saveAttendance(int index, bool isPresent) {
+  void saveAttendance(int index, String status) {
     setState(() {
-      attendanceStatus[index] = isPresent;
+      attendanceStatus[index] = status;
     });
   }
 
@@ -60,7 +62,6 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
       );
     } else {
       final selectedRoom = roomNames[selectedRoomIndex - 1];
-
       List<Future<DocumentReference>> futures = [];
 
       for (int index = 0; index < employeeNames.length; index++) {
@@ -68,7 +69,7 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
           'employeeName': employeeNames[index],
           'roomName': selectedRoom,
           'timestamp': DateTime.now(),
-          'isPresent': attendanceStatus[index] ?? false,
+          'status': attendanceStatus[index] ?? 'Absen',
         };
 
         futures.add(attendanceCollection.add(attendanceData));
@@ -109,12 +110,13 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Center(child: Text('Employee Attendance')),
+        title: const Text('Employee Attendance'),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.list),
             onPressed: () {
-              // Navigate to the AttendanceListPage
+// Navigate to the AttendanceListPage
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => AttendanceListPage()),
@@ -122,6 +124,67 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
             },
           ),
         ],
+      ),
+      drawer: Drawer(
+        child: Container(
+          color: Colors.grey[200],
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              Container(
+                height: 150,
+                child: DrawerHeader(
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Menu',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              ListTile(
+                title: const Text('Informasi'),
+                leading: Icon(Icons.info),
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => InformasiPage(
+                                adminEmail: '',
+                              )));
+                },
+              ),
+              ListTile(
+                title: const Text('Absensi'),
+                leading: Icon(Icons.calendar_today),
+                onTap: () {
+// Close the drawer and stay on the same page
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Logout'),
+                leading: Icon(Icons.logout),
+                onTap: () {
+// Navigate back to the Login page
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LoginPage(),
+                    ),
+                    (route) => false,
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
       body: ListView.builder(
         itemCount: employeeNames.length,
@@ -133,49 +196,78 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
               children: [
                 ElevatedButton(
                   onPressed: () {
-                    saveAttendance(index, true);
+                    saveAttendance(index, 'Hadir');
                   },
                   style: ButtonStyle(
                     backgroundColor: MaterialStateProperty.resolveWith<Color>(
                       (Set<MaterialState> states) {
                         if (attendanceStatus.containsKey(index) &&
-                            attendanceStatus[index]!) {
+                            attendanceStatus[index] == 'Hadir') {
                           return Colors.green;
                         }
                         return Colors.transparent;
                       },
                     ),
                   ),
-                  child: const Text('Hadir'),
+                  child: const Text(
+                    'Hadir',
+                    style: TextStyle(fontSize: 14),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    saveAttendance(index, false);
+                    saveAttendance(index, 'Absen');
                   },
                   style: ButtonStyle(
                     backgroundColor: MaterialStateProperty.resolveWith<Color>(
                       (Set<MaterialState> states) {
                         if (attendanceStatus.containsKey(index) &&
-                            !attendanceStatus[index]!) {
+                            attendanceStatus[index] == 'Absen') {
                           return Colors.red;
                         }
                         return Colors.transparent;
                       },
                     ),
                   ),
-                  child: const Text('Absen'),
+                  child: const Text(
+                    'Absen',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    saveAttendance(index, 'Izin');
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.resolveWith<Color>(
+                      (Set<MaterialState> states) {
+                        if (attendanceStatus.containsKey(index) &&
+                            attendanceStatus[index] == 'Izin') {
+                          return Colors.yellow;
+                        }
+                        return Colors.transparent;
+                      },
+                    ),
+                  ),
+                  child: const Text(
+                    'Izin',
+                    style: TextStyle(fontSize: 14),
+                  ),
                 ),
               ],
             ),
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: attendanceStatus.isNotEmpty ? submitAttendance : null,
-        label: Text('Simpan (${attendanceStatus.length})'),
-        icon: const Icon(Icons.save),
+      floatingActionButton: Container(
+        margin: EdgeInsets.only(bottom: 20, right: 20),
+        child: FloatingActionButton.extended(
+          onPressed: attendanceStatus.isNotEmpty ? submitAttendance : null,
+          label: Text('Simpan (${attendanceStatus.length})'),
+          icon: const Icon(Icons.save),
+        ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomSheet: isRoomListVisible
           ? Container(
               height: 100,
@@ -210,10 +302,11 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
             });
           },
           child: Text(
-              selectedRoomName), // Update the text to display selected room name
+            selectedRoomName,
+            style: TextStyle(fontSize: 16),
+          ), // Update the text to display selected room name
         ),
       ],
     );
   }
-  
 }

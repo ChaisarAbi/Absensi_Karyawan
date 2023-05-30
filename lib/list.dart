@@ -31,6 +31,7 @@ class AttendanceListPage extends StatelessWidget {
             final roomName = attendanceData['roomName'] ?? 'Unknown';
             final employeeName = attendanceData['employeeName'] ?? 'Unknown';
             final isPresent = attendanceData['isPresent'] ?? false;
+            final status = attendanceData['status'] ?? 'Absen';
 
             if (!roomAttendanceMap.containsKey(roomName)) {
               roomAttendanceMap[roomName] = {};
@@ -41,6 +42,10 @@ class AttendanceListPage extends StatelessWidget {
             }
 
             if (isPresent) {
+              roomAttendanceMap[roomName]![employeeName] =
+                  (roomAttendanceMap[roomName]![employeeName] ?? 0) + 1;
+            }
+            if (status == 'Izin') {
               roomAttendanceMap[roomName]![employeeName] =
                   (roomAttendanceMap[roomName]![employeeName] ?? 0) + 1;
             }
@@ -72,6 +77,7 @@ class AttendanceListPage extends StatelessWidget {
     );
   }
 }
+
 class AttendanceDetailPage extends StatefulWidget {
   final String roomName;
   final Map<String, int> attendanceDataMap;
@@ -84,20 +90,31 @@ class AttendanceDetailPage extends StatefulWidget {
 
 class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
   final Map<String, int> absenceCountMap = {};
+  final Map<String, int> izinCountMap = {};
+  bool _isDisposed = false;
 
   @override
   void initState() {
     super.initState();
-    calculateAbsenceCount();
+    calculateAbsenceAndIzinCount();
   }
 
-  void calculateAbsenceCount() async {
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  void calculateAbsenceAndIzinCount() async {
     for (final employeeName in widget.attendanceDataMap.keys) {
-      final absenceCount =
-          await getTotalAbsence(widget.roomName, employeeName);
-      setState(() {
-        absenceCountMap[employeeName] = absenceCount;
-      });
+      final absenceCount = await getTotalAbsence(widget.roomName, employeeName);
+      final izinCount = await getTotalIzin(widget.roomName, employeeName);
+      if (!_isDisposed) {
+        setState(() {
+          absenceCountMap[employeeName] = absenceCount;
+          izinCountMap[employeeName] = izinCount;
+        });
+      }
     }
   }
 
@@ -115,6 +132,7 @@ class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
           final employeeName = employeeNames[index];
           final attendanceCount = widget.attendanceDataMap[employeeName] ?? 0;
           final absenceCount = absenceCountMap[employeeName] ?? 0;
+          final izinCount = izinCountMap[employeeName] ?? 0;
 
           return ListTile(
             title: Text(employeeName),
@@ -123,6 +141,7 @@ class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
               children: [
                 Text('Total Kehadiran: $attendanceCount'),
                 Text('Total Ketidakhadiran: $absenceCount'),
+                Text('Total Izin: $izinCount'),
               ],
             ),
           );
@@ -148,5 +167,24 @@ class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
     }
 
     return absenceCount;
+  }
+
+  Future<int> getTotalIzin(String roomName, String employeeName) async {
+    int izinCount = 0;
+
+    try {
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('absen')
+          .where('roomName', isEqualTo: roomName)
+          .where('employeeName', isEqualTo: employeeName)
+          .where('status', isEqualTo: 'Izin')
+          .get();
+
+      izinCount = snapshot.docs.length;
+    } catch (error) {
+      print('Error getting izin data: $error');
+    }
+
+    return izinCount;
   }
 }

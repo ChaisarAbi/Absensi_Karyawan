@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/absensi.dart';
+import 'package:flutter_application_1/informasi.dart';
 import 'package:flutter_application_1/list.dart';
 
 class LoginPage extends StatefulWidget {
@@ -38,7 +39,9 @@ class _LoginPageState extends State<LoginPage> {
       _clearForm();
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => EmployeeAttendancePage()),
+        MaterialPageRoute(
+          builder: (context) => InformasiPage(adminEmail: ''),
+        ),
       );
     } else {
       // Login admin gagal, cek sebagai login tamu
@@ -93,23 +96,39 @@ class _LoginPageState extends State<LoginPage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextFormField(
               controller: _usernameController,
-              decoration: const InputDecoration(labelText: 'Username'),
+              decoration: const InputDecoration(
+                labelText: 'Username',
+                prefixIcon: Icon(Icons.person),
+              ),
             ),
+            const SizedBox(height: 16.0),
             TextFormField(
               controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                prefixIcon: Icon(Icons.lock),
+              ),
               obscureText: true,
             ),
+            const SizedBox(height: 24.0),
             ElevatedButton(
               onPressed: _isLoading ? null : _loginAdmin,
               child: _isLoading
-                  ? CircularProgressIndicator()
+                  ? SizedBox(
+                      width: 20.0,
+                      height: 20.0,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                      ),
+                    )
                   : const Text('Login'),
             ),
-            ElevatedButton(
+            const SizedBox(height: 16.0),
+            TextButton(
               onPressed: _loginGuest,
               child: const Text('Login as Guest'),
             ),
@@ -119,5 +138,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-
-
