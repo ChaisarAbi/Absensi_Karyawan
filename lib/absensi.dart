@@ -15,24 +15,48 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
       FirebaseFirestore.instance.collection('absen');
 
   final List<String> employeeNames = [
-    'John Doe',
-    'Jane Smith',
-    'Michael Johnson',
-    'Emily Davis',
+    'Abdul Halim Muadzam Syah',
+    'Adika Hilmi Aziz',
+    'Ahmad Rohim',
+    'Almira Pirda Sari',
+    'Altar Rizki Putra Denatal',
+    'Arfian Alfarizi',
+    'Arshavin Davi Ramadhan',
+    'Azzahra Syaila Wartama',
+    'Ezzar Aditya Pratama',
+    'Franda',
+    'Hendra Aditya Nugraha',
+    'Ibrahim Putra Pratama',
+    'Keyla Azzahra Putri',
+    'Muhammad Bisma Ramadhan',
+    'Muhammad Irfan Bachtiar Hidayat',
+    'Muhammad Khafi',
+    'Muhammad Wadzi Falah',
+    'Muhammad Zainul Majdi',
+    'Nabilla Rahmadini',
+    'Naya Aninda Salsabila',
+    'Raka Nur Afzhal',
+    'Reihaan Abdur Razzaaq',
+    'Syafwa Kamedia Radisti',
+    'Zahira Putri Maryudi',
+    'Zulfa Nur Amina',
   ];
 
   final List<String> roomNames = [
-    'Meeting Room A',
-    'Meeting Room B',
-    'Conference Room',
-    'Training Room',
+    'Matematika',
+    'Tematik',
+    'Fiqih',
+    'Akidah',
+    'PJOK',
+    'TIK',
+    'SBDP',
   ];
 
   Map<int, String> attendanceStatus =
       {}; // Map to store attendance status for each employee
   bool isRoomListVisible = false;
   int selectedRoomIndex = 0; // Selected room index
-  String selectedRoomName = 'Select Room'; // Selected room name
+  String selectedRoomName = 'Pilih Mapel'; // Selected room name
 
   void saveAttendance(int index, String status) {
     setState(() {
@@ -47,8 +71,8 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
         builder: (BuildContext context) {
           return AlertDialog(
             title: const Text('Error'),
-            content: const Text(
-                'Please select a room before saving the attendance.'),
+            content:
+                const Text('Silakan Pilih Mata Pelajaran Terlebih Dahulu!'),
             actions: [
               TextButton(
                 onPressed: () {
@@ -82,7 +106,7 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
           builder: (BuildContext context) {
             return AlertDialog(
               title: const Text('Success'),
-              content: const Text('Attendance data has been saved.'),
+              content: const Text('Absenssi Berhasil Disimpan'),
               actions: [
                 TextButton(
                   onPressed: () {
@@ -160,6 +184,9 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
                               )));
                 },
               ),
+              Divider(
+                color: Colors.black,
+              ),
               ListTile(
                 title: const Text('Absensi'),
                 leading: Icon(Icons.calendar_today),
@@ -167,6 +194,9 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
 // Close the drawer and stay on the same page
                   Navigator.pop(context);
                 },
+              ),
+              Divider(
+                color: Colors.black,
               ),
               ListTile(
                 title: const Text('Logout'),
@@ -181,6 +211,9 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
                     (route) => false,
                   );
                 },
+              ),
+              Divider(
+                color: Colors.black,
               ),
             ],
           ),

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class AttendanceListPage extends StatelessWidget {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -23,15 +24,15 @@ class AttendanceListPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final List<DocumentSnapshot> documents = snapshot.data?.docs ?? [];
+          final List<DocumentSnapshot> documents = snapshot.data!.docs;
           final Map<String, Map<String, int>> roomAttendanceMap = {};
 
           for (final document in documents) {
             final attendanceData = document.data() as Map<String, dynamic>;
-            final roomName = attendanceData['roomName'] ?? 'Unknown';
-            final employeeName = attendanceData['employeeName'] ?? 'Unknown';
-            final isPresent = attendanceData['isPresent'] ?? false;
-            final status = attendanceData['status'] ?? 'Absen';
+            final roomName = attendanceData['roomName'] as String? ?? '';
+            final employeeName =
+                attendanceData['employeeName'] as String? ?? '';
+            final status = attendanceData['status'] as String? ?? '';
 
             if (!roomAttendanceMap.containsKey(roomName)) {
               roomAttendanceMap[roomName] = {};
@@ -41,31 +42,45 @@ class AttendanceListPage extends StatelessWidget {
               roomAttendanceMap[roomName]![employeeName] = 0;
             }
 
-            if (isPresent) {
-              roomAttendanceMap[roomName]![employeeName] =
-                  (roomAttendanceMap[roomName]![employeeName] ?? 0) + 1;
-            }
-            if (status == 'Izin') {
+            if (status == 'Izin' || status == 'Hadir' || status == 'Absen') {
               roomAttendanceMap[roomName]![employeeName] =
                   (roomAttendanceMap[roomName]![employeeName] ?? 0) + 1;
             }
           }
 
+          // Mengurutkan daftar nama karyawan sesuai dengan abjad
+          final sortedEmployeeNames = roomAttendanceMap.values
+              .expand((attendanceDataMap) => attendanceDataMap.keys)
+              .toSet()
+              .toList()
+            ..sort();
+
           return ListView.builder(
-            itemCount: roomAttendanceMap.length,
+            itemCount: sortedEmployeeNames.length,
             itemBuilder: (BuildContext context, int index) {
-              final roomName = roomAttendanceMap.keys.elementAt(index);
-              final attendanceDataMap = roomAttendanceMap[roomName]!;
+              final employeeName = sortedEmployeeNames[index];
+              final roomNames = roomAttendanceMap.keys
+                  .where((roomName) =>
+                      roomAttendanceMap[roomName]!.containsKey(employeeName))
+                  .toList();
 
               return ListTile(
-                title: Text('$roomName'),
+                title: Text(
+                  employeeName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                subtitle: Text('Ruangan: ${roomNames.join(', ')}'),
                 onTap: () {
-                  // Navigate to AttendanceDetailPage and pass attendance data map
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          AttendanceDetailPage(roomName, attendanceDataMap),
+                      builder: (context) => AttendanceDetailPage(
+                        employeeName,
+                        roomAttendanceMap,
+                      ),
                     ),
                   );
                 },
@@ -79,10 +94,10 @@ class AttendanceListPage extends StatelessWidget {
 }
 
 class AttendanceDetailPage extends StatefulWidget {
-  final String roomName;
-  final Map<String, int> attendanceDataMap;
+  final String employeeName;
+  final Map<String, Map<String, int>> roomAttendanceMap;
 
-  AttendanceDetailPage(this.roomName, this.attendanceDataMap);
+  AttendanceDetailPage(this.employeeName, this.roomAttendanceMap);
 
   @override
   _AttendanceDetailPageState createState() => _AttendanceDetailPageState();
@@ -91,7 +106,8 @@ class AttendanceDetailPage extends StatefulWidget {
 class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
   final Map<String, int> absenceCountMap = {};
   final Map<String, int> izinCountMap = {};
-  bool _isDisposed = false;
+  final Map<String, int> hadirCountMap = {};
+  DateTime? selectedDate;
 
   @override
   void initState() {
@@ -101,65 +117,70 @@ class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
 
   @override
   void dispose() {
-    _isDisposed = true;
+    // Batalkan timer atau hentikan pemantauan animasi di sini
     super.dispose();
   }
 
+  void _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+      });
+
+      calculateAbsenceAndIzinCount(); // Tambahkan pemanggilan fungsi ini setelah mengubah tanggal
+    }
+  }
+
   void calculateAbsenceAndIzinCount() async {
-    for (final employeeName in widget.attendanceDataMap.keys) {
-      final absenceCount = await getTotalAbsence(widget.roomName, employeeName);
-      final izinCount = await getTotalIzin(widget.roomName, employeeName);
-      if (!_isDisposed) {
+    for (final roomName in widget.roomAttendanceMap.keys) {
+      final attendanceDataMap = widget.roomAttendanceMap[roomName]!;
+      final absenceCount =
+          await getTotalAbsence(roomName, widget.employeeName, selectedDate);
+      final izinCount =
+          await getTotalIzin(roomName, widget.employeeName, selectedDate);
+      final hadirCount =
+          await getTotalHadir(roomName, widget.employeeName, selectedDate);
+      ;
+
+      // Periksa apakah objek State masih terpasang sebelum pemanggilan setState()
+      if (mounted) {
         setState(() {
-          absenceCountMap[employeeName] = absenceCount;
-          izinCountMap[employeeName] = izinCount;
+          absenceCountMap[roomName] = absenceCount;
+          izinCountMap[roomName] = izinCount;
+          hadirCountMap[roomName] = hadirCount;
         });
       }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    List<String> employeeNames = widget.attendanceDataMap.keys.toList();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Attendance Detail - ${widget.roomName}'),
-      ),
-      body: ListView.builder(
-        itemCount: employeeNames.length,
-        itemBuilder: (BuildContext context, int index) {
-          final employeeName = employeeNames[index];
-          final attendanceCount = widget.attendanceDataMap[employeeName] ?? 0;
-          final absenceCount = absenceCountMap[employeeName] ?? 0;
-          final izinCount = izinCountMap[employeeName] ?? 0;
-
-          return ListTile(
-            title: Text(employeeName),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Total Kehadiran: $attendanceCount'),
-                Text('Total Ketidakhadiran: $absenceCount'),
-                Text('Total Izin: $izinCount'),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Future<int> getTotalAbsence(String roomName, String employeeName) async {
+  Future<int> getTotalAbsence(
+      String roomName, String employeeName, DateTime? selectedDate) async {
     int absenceCount = 0;
 
     try {
-      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+      Query query = FirebaseFirestore.instance
           .collection('absen')
           .where('roomName', isEqualTo: roomName)
           .where('employeeName', isEqualTo: employeeName)
-          .where('isPresent', isEqualTo: false)
-          .get();
+          .where('status', isEqualTo: 'Absen');
+
+      if (selectedDate != null) {
+        final startOfDay =
+            DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+        final endOfDay = startOfDay.add(Duration(days: 1));
+
+        query = query.where('timestamp',
+            isGreaterThanOrEqualTo: startOfDay, isLessThan: endOfDay);
+      }
+
+      final QuerySnapshot snapshot = await query.get();
 
       absenceCount = snapshot.docs.length;
     } catch (error) {
@@ -169,16 +190,55 @@ class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
     return absenceCount;
   }
 
-  Future<int> getTotalIzin(String roomName, String employeeName) async {
-    int izinCount = 0;
+  Future<int> getTotalHadir(
+      String roomName, String employeeName, DateTime? selectedDate) async {
+    int hadirCount = 0;
 
     try {
-      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+      Query query = FirebaseFirestore.instance
           .collection('absen')
           .where('roomName', isEqualTo: roomName)
           .where('employeeName', isEqualTo: employeeName)
-          .where('status', isEqualTo: 'Izin')
-          .get();
+          .where('status', isEqualTo: 'Hadir');
+      if (selectedDate != null) {
+        final startOfDay =
+            DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+        final endOfDay = startOfDay.add(Duration(days: 1));
+
+        query = query.where('timestamp',
+            isGreaterThanOrEqualTo: startOfDay, isLessThan: endOfDay);
+      }
+
+      final QuerySnapshot snapshot = await query.get();
+
+      hadirCount = snapshot.docs.length;
+    } catch (error) {
+      print('Error getting absence data: $error');
+    }
+
+    return hadirCount;
+  }
+
+  Future<int> getTotalIzin(
+      String roomName, String employeeName, DateTime? selectedDate) async {
+    int izinCount = 0;
+
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('absen')
+          .where('roomName', isEqualTo: roomName)
+          .where('employeeName', isEqualTo: employeeName)
+          .where('status', isEqualTo: 'Izin');
+      if (selectedDate != null) {
+        final startOfDay =
+            DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+        final endOfDay = startOfDay.add(Duration(days: 1));
+
+        query = query.where('timestamp',
+            isGreaterThanOrEqualTo: startOfDay, isLessThan: endOfDay);
+      }
+
+      final QuerySnapshot snapshot = await query.get();
 
       izinCount = snapshot.docs.length;
     } catch (error) {
@@ -186,5 +246,45 @@ class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
     }
 
     return izinCount;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<String> roomNames = widget.roomAttendanceMap.keys.toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Detail Presensi - ${widget.employeeName}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_today),
+            onPressed: _selectDate,
+          ),
+        ],
+      ),
+      body: ListView.builder(
+        itemCount: roomNames.length,
+        itemBuilder: (BuildContext context, int index) {
+          final roomName = roomNames[index];
+          final attendanceCount =
+              widget.roomAttendanceMap[roomName]![widget.employeeName] ?? 0;
+          final absenceCount = absenceCountMap[roomName] ?? 0;
+          final izinCount = izinCountMap[roomName] ?? 0;
+          final hadirCount = hadirCountMap[roomName] ?? 0;
+
+          return ListTile(
+            title: Text(roomName),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Total Kehadiran: $hadirCount'),
+                Text('Total Ketidakhadiran: $absenceCount'),
+                Text('Total Izin: $izinCount'),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }
