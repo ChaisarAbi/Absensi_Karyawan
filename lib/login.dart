@@ -4,6 +4,26 @@ import 'package:flutter_application_1/absensi.dart';
 import 'package:flutter_application_1/informasi.dart';
 import 'package:flutter_application_1/list.dart';
 
+class User {
+  final String id;
+  final String name;
+  final bool isAdmin;
+
+  User({required this.id, required this.name, required this.isAdmin});
+}
+
+class UserManager {
+  static User loggedInUser = User(id: '', name: '', isAdmin: false);
+
+  static void setLoggedInUser(User user) {
+    loggedInUser = user;
+  }
+
+  static User getLoggedInUser() {
+    return loggedInUser;
+  }
+}
+
 class LoginPage extends StatefulWidget {
   @override
   _LoginPageState createState() => _LoginPageState();
@@ -36,6 +56,14 @@ class _LoginPageState extends State<LoginPage> {
     if (snapshot.docs.isNotEmpty) {
       final adminData = snapshot.docs.first.data() as Map<String, dynamic>;
       print('Login admin berhasil');
+
+      User loggedInUser = User(
+        id: snapshot.docs.first.id,
+        name: snapshot.docs.first['nama'],
+        isAdmin: snapshot.docs.first['isAdmin'],
+      );
+      UserManager.setLoggedInUser(loggedInUser);
+
       _clearForm();
       Navigator.push(
         context,
@@ -64,6 +92,14 @@ class _LoginPageState extends State<LoginPage> {
 
     if (snapshot.docs.isNotEmpty) {
       print('Login tamu berhasil');
+
+      User loggedInUser = User(
+        id: snapshot.docs.first.id,
+        name: snapshot.docs.first['nama'],
+        isAdmin: snapshot.docs.first['isAdmin'],
+      );
+      UserManager.setLoggedInUser(loggedInUser);
+
       _clearForm();
       Navigator.push(
         context,

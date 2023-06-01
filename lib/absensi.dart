@@ -42,21 +42,38 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
     'Zulfa Nur Amina',
   ];
 
-  final List<String> roomNames = [
-    'Matematika',
-    'Tematik',
-    'Fiqih',
-    'Akidah',
-    'PJOK',
-    'TIK',
-    'SBDP',
-  ];
-
-  Map<int, String> attendanceStatus =
-      {}; // Map to store attendance status for each employee
+  List<String> roomNames = [];
   bool isRoomListVisible = false;
   int selectedRoomIndex = 0; // Selected room index
   String selectedRoomName = 'Pilih Mapel'; // Selected room name
+
+  Future<void> fetchUserSelectedRooms() async {
+    try {
+      User loggedInUser = UserManager.getLoggedInUser();
+
+      QuerySnapshot querySnapshot = await firestore
+          .collection('user')
+          .where('nama', isEqualTo: loggedInUser.name)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        List<String> selectedRooms =
+            (querySnapshot.docs[0]['selectedRoomNames'] as List<dynamic>)
+                .where((roomName) => roomName != null && roomName.isNotEmpty)
+                .cast<String>()
+                .toList();
+
+        setState(() {
+          roomNames = selectedRooms;
+        });
+      }
+    } catch (e) {
+      print('Failed to fetch user selected rooms: $e');
+    }
+  }
+
+  Map<int, String> attendanceStatus =
+      {}; // Map to store attendance status for each employee
 
   void saveAttendance(int index, String status) {
     setState(() {
@@ -131,6 +148,12 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    fetchUserSelectedRooms();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -140,7 +163,7 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
           IconButton(
             icon: const Icon(Icons.list),
             onPressed: () {
-// Navigate to the AttendanceListPage
+              // Navigate to the AttendanceListPage
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => AttendanceListPage()),
@@ -157,7 +180,7 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
             children: <Widget>[
               Container(
                 height: 150,
-                child: DrawerHeader(
+                child: const DrawerHeader(
                   decoration: BoxDecoration(
                     color: Colors.blue,
                   ),
@@ -174,35 +197,37 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
               ),
               ListTile(
                 title: const Text('Informasi'),
-                leading: Icon(Icons.info),
+                leading: const Icon(Icons.info),
                 onTap: () {
                   Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => InformasiPage(
-                                adminNama: '',
-                              )));
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const InformasiPage(
+                        adminNama: '',
+                      ),
+                    ),
+                  );
                 },
               ),
-              Divider(
+              const Divider(
                 color: Colors.black,
               ),
               ListTile(
                 title: const Text('Absensi'),
-                leading: Icon(Icons.calendar_today),
+                leading: const Icon(Icons.calendar_today),
                 onTap: () {
-// Close the drawer and stay on the same page
+                  // Close the drawer and stay on the same page
                   Navigator.pop(context);
                 },
               ),
-              Divider(
+              const Divider(
                 color: Colors.black,
               ),
               ListTile(
                 title: const Text('Logout'),
-                leading: Icon(Icons.logout),
+                leading: const Icon(Icons.logout),
                 onTap: () {
-// Navigate back to the Login page
+                  // Navigate back to the Login page
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(
@@ -212,7 +237,7 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
                   );
                 },
               ),
-              Divider(
+              const Divider(
                 color: Colors.black,
               ),
             ],
@@ -292,13 +317,10 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
           );
         },
       ),
-      floatingActionButton: Container(
-        margin: EdgeInsets.only(bottom: 20, right: 20),
-        child: FloatingActionButton.extended(
-          onPressed: attendanceStatus.isNotEmpty ? submitAttendance : null,
-          label: Text('Simpan (${attendanceStatus.length})'),
-          icon: const Icon(Icons.save),
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: attendanceStatus.isNotEmpty ? submitAttendance : null,
+        label: Text('Simpan (${attendanceStatus.length})'),
+        icon: const Icon(Icons.save),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomSheet: isRoomListVisible
@@ -314,10 +336,8 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
                       onPressed: () {
                         setState(() {
                           isRoomListVisible = false;
-                          selectedRoomIndex =
-                              index + 1; // Increment the index by 1
-                          selectedRoomName =
-                              roomNames[index]; // Update the selected room name
+                          selectedRoomIndex = index + 1;
+                          selectedRoomName = roomNames[index];
                         });
                       },
                       child: Text(roomNames[index]),
@@ -326,7 +346,7 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
                 },
               ),
             )
-          : const SizedBox.shrink(),
+          : null, // Remove SizedBox.shrink() and set bottomSheet to null
       persistentFooterButtons: [
         ElevatedButton(
           onPressed: () {
@@ -337,7 +357,7 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
           child: Text(
             selectedRoomName,
             style: TextStyle(fontSize: 16),
-          ), // Update the text to display selected room name
+          ),
         ),
       ],
     );

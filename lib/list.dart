@@ -248,6 +248,30 @@ class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
     return izinCount;
   }
 
+  Widget buildAttendanceButton(
+      String roomName, String employeeName, String status) {
+    return ElevatedButton(
+      onPressed: () => updateAttendance(roomName, employeeName, status),
+      child: Text(status),
+    );
+  }
+
+  void updateAttendance(String roomName, String employeeName, String status) {
+    final DocumentReference attendanceRef = FirebaseFirestore.instance
+        .collection('absen')
+        .doc('$roomName-$employeeName-${selectedDate.toString()}');
+
+    attendanceRef.update({'status': status}).then((value) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Attendance updated successfully')),
+      );
+    }).catchError((error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update attendance: $error')),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<String> roomNames = widget.roomAttendanceMap.keys.toList();
@@ -280,6 +304,14 @@ class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
                 Text('Total Kehadiran: $hadirCount'),
                 Text('Total Ketidakhadiran: $absenceCount'),
                 Text('Total Izin: $izinCount'),
+              ],
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                buildAttendanceButton(roomName, widget.employeeName, 'Hadir'),
+                buildAttendanceButton(roomName, widget.employeeName, 'Absen'),
+                buildAttendanceButton(roomName, widget.employeeName, 'Izin'),
               ],
             ),
           );
