@@ -180,7 +180,7 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
                       context,
                       MaterialPageRoute(
                           builder: (context) => InformasiPage(
-                                adminEmail: '',
+                                adminNama: '',
                               )));
                 },
               ),

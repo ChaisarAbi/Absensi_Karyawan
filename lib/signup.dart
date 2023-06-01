@@ -1,6 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/login.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DaftarPage extends StatefulWidget {
   @override
@@ -8,15 +8,20 @@ class DaftarPage extends StatefulWidget {
 }
 
 class _DaftarPageState extends State<DaftarPage> {
-  final FirebaseFirestore firestore = FirebaseFirestore.instance;
-  final CollectionReference userCollection =
-      FirebaseFirestore.instance.collection('user');
-
   final TextEditingController _namaController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isAdmin = false;
   bool _isLoading = false;
+  List<String> _selectedRoomNames = [];
+
+  @override
+  void dispose() {
+    _namaController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   void _submitForm() async {
     setState(() {
@@ -32,11 +37,13 @@ class _DaftarPageState extends State<DaftarPage> {
       'email': email,
       'password': password,
       'isAdmin': _isAdmin,
+      'selectedRoomNames': _selectedRoomNames,
     };
 
     try {
-      await userCollection.add(userData);
+      await FirebaseFirestore.instance.collection('user').add(userData);
       print('Data pendaftaran berhasil disimpan');
+
       _clearForm();
       Navigator.pushReplacement(
         context,
@@ -58,11 +65,22 @@ class _DaftarPageState extends State<DaftarPage> {
     _passwordController.clear();
     setState(() {
       _isAdmin = false;
+      _selectedRoomNames.clear();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final List<String> roomNames = [
+      'Matematika',
+      'Tematik',
+      'Fiqih',
+      'Akidah',
+      'PJOK',
+      'TIK',
+      'SBDP',
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Form Pendaftaran'),
@@ -70,6 +88,7 @@ class _DaftarPageState extends State<DaftarPage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextFormField(
               controller: _namaController,
@@ -93,6 +112,35 @@ class _DaftarPageState extends State<DaftarPage> {
                 });
               },
             ),
+            const SizedBox(height: 16.0),
+            Text(
+              'Pilih Ruangan:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Expanded(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: roomNames.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final roomName = roomNames[index];
+
+                  return CheckboxListTile(
+                    title: Text(roomName),
+                    value: _selectedRoomNames.contains(roomName),
+                    onChanged: (value) {
+                      setState(() {
+                        if (value!) {
+                          _selectedRoomNames.add(roomName);
+                        } else {
+                          _selectedRoomNames.remove(roomName);
+                        }
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: _isLoading ? null : _submitForm,
               child: _isLoading

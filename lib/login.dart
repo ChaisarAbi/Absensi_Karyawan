@@ -19,7 +19,7 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _isLoading = false;
 
-  Future<void> _loginAdmin() async {
+  Future<void> _loginAdmin(BuildContext context) async {
     setState(() {
       _isLoading = true;
     });
@@ -34,18 +34,17 @@ class _LoginPageState extends State<LoginPage> {
         .get();
 
     if (snapshot.docs.isNotEmpty) {
-      // Login admin berhasil
+      final adminData = snapshot.docs.first.data() as Map<String, dynamic>;
       print('Login admin berhasil');
       _clearForm();
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => InformasiPage(adminEmail: ''),
+          builder: (context) => InformasiPage(adminNama: adminData['nama']),
         ),
       );
     } else {
-      // Login admin gagal, cek sebagai login tamu
-      _loginGuest();
+      _loginGuest(context);
     }
 
     setState(() {
@@ -53,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
     });
   }
 
-  Future<void> _loginGuest() async {
+  Future<void> _loginGuest(BuildContext context) async {
     final username = _usernameController.text;
     final password = _passwordController.text;
 
@@ -64,7 +63,6 @@ class _LoginPageState extends State<LoginPage> {
         .get();
 
     if (snapshot.docs.isNotEmpty) {
-      // Login tamu berhasil
       print('Login tamu berhasil');
       _clearForm();
       Navigator.push(
@@ -72,7 +70,6 @@ class _LoginPageState extends State<LoginPage> {
         MaterialPageRoute(builder: (context) => AttendanceListPage()),
       );
     } else {
-      // Login tamu gagal
       print('Login tamu gagal');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -116,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 24.0),
             ElevatedButton(
-              onPressed: _isLoading ? null : _loginAdmin,
+              onPressed: _isLoading ? null : () => _loginAdmin(context),
               child: _isLoading
                   ? SizedBox(
                       width: 20.0,
@@ -129,7 +126,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 16.0),
             TextButton(
-              onPressed: _loginGuest,
+              onPressed: () => _loginGuest(context),
               child: const Text('Login as Guest'),
             ),
           ],

@@ -4,16 +4,16 @@ import 'package:flutter_application_1/absensi.dart';
 import 'package:flutter_application_1/login.dart';
 
 class InformasiPage extends StatelessWidget {
-  final String adminEmail;
+  final String adminNama;
 
-  InformasiPage({required this.adminEmail});
+  const InformasiPage({super.key, required this.adminNama, Object? adminData});
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<DocumentSnapshot>(
       future: FirebaseFirestore.instance
           .collection('user')
-          .where('email', isEqualTo: adminEmail)
+          .where('nama', isEqualTo: adminNama)
           .get()
           .then((snapshot) => snapshot.docs.first),
       builder:
@@ -40,9 +40,21 @@ class InformasiPage extends StatelessWidget {
           );
         }
 
-        final adminData = snapshot.data?.data()
-            as Map<String, dynamic>?; // Explicit cast to Map
-        final adminName = adminData?['nama'];
+        final adminData = snapshot.data?.data() as Map<String, dynamic>?;
+
+        if (adminData == null) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Informasi'),
+            ),
+            body: Center(
+              child: Text('Data admin not found'),
+            ),
+          );
+        }
+
+        final adminEmail = adminData['email'];
+        final selectedRoomNames = adminData['selectedRoomNames'] ?? [];
 
         return Scaffold(
           appBar: AppBar(
@@ -54,7 +66,7 @@ class InformasiPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Selamat datang, $adminName!',
+                  'Selamat datang, $adminNama!',
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -69,8 +81,23 @@ class InformasiPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text('Nama: $adminName'),
+                Text('Nama: $adminNama'),
                 Text('Email: $adminEmail'),
+                const SizedBox(height: 16),
+                const Text(
+                  'Ruangan yang dapat diakses:',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: selectedRoomNames.map<Widget>((roomName) {
+                    return Text('- $roomName');
+                  }).toList(),
+                ),
               ],
             ),
           ),
@@ -101,7 +128,7 @@ class InformasiPage extends StatelessWidget {
                     title: const Text('Informasi'),
                     leading: const Icon(Icons.info),
                     onTap: () {
-                        Navigator.pop(context);
+                      Navigator.pop(context);
                     },
                   ),
                   const Divider(
@@ -111,11 +138,10 @@ class InformasiPage extends StatelessWidget {
                     title: const Text('Absensi'),
                     leading: const Icon(Icons.calendar_today),
                     onTap: () {
-// Close the drawer and stay on the same page
                       Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) =>EmployeeAttendancePage()));
+                              builder: (context) => EmployeeAttendancePage()));
                     },
                   ),
                   const Divider(
@@ -125,7 +151,6 @@ class InformasiPage extends StatelessWidget {
                     title: const Text('Logout'),
                     leading: const Icon(Icons.logout),
                     onTap: () {
-// Navigate back to the Login page
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
