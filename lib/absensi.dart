@@ -81,6 +81,26 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
     });
   }
 
+  void showWarningPopup(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Warning'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void submitAttendance() {
     if (selectedRoomIndex == 0) {
       showDialog(
@@ -104,16 +124,32 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
     } else {
       final selectedRoom = roomNames[selectedRoomIndex - 1];
       List<Future<DocumentReference>> futures = [];
+      List<int> missingEmployees = [];
 
       for (int index = 0; index < employeeNames.length; index++) {
-        final attendanceData = {
-          'employeeName': employeeNames[index],
-          'roomName': selectedRoom,
-          'timestamp': DateTime.now(),
-          'status': attendanceStatus[index] ?? 'Absen',
-        };
+        if (!attendanceStatus.containsKey(index)) {
+          missingEmployees.add(index);
+        } else {
+          final attendanceData = {
+            'employeeName': employeeNames[index],
+            'roomName': selectedRoom,
+            'timestamp': DateTime.now(),
+            'status': attendanceStatus[index] ?? 'Absen',
+          };
 
-        futures.add(attendanceCollection.add(attendanceData));
+          futures.add(attendanceCollection.add(attendanceData));
+        }
+      }
+
+      if (missingEmployees.isNotEmpty) {
+        String missingEmployeesNames =
+            missingEmployees.map((index) => employeeNames[index]).join(', ');
+
+        String warningMessage =
+            'Murid berikut belum diabsen: $missingEmployeesNames. Silakan cek kembali.';
+
+        showWarningPopup(warningMessage);
+        return;
       }
 
       Future.wait(futures).then((_) {
@@ -123,7 +159,7 @@ class _EmployeeAttendancePageState extends State<EmployeeAttendancePage> {
           builder: (BuildContext context) {
             return AlertDialog(
               title: const Text('Success'),
-              content: const Text('Absenssi Berhasil Disimpan'),
+              content: const Text('Absensi Berhasil Disimpan'),
               actions: [
                 TextButton(
                   onPressed: () {

@@ -132,30 +132,32 @@ class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
     if (picked != null && picked != selectedDate) {
       setState(() {
         selectedDate = picked;
+        calculateAbsenceAndIzinCount(); // Tambahkan pemanggilan fungsi ini setelah mengubah tanggal
       });
-
-      calculateAbsenceAndIzinCount(); // Tambahkan pemanggilan fungsi ini setelah mengubah tanggal
     }
   }
 
   void calculateAbsenceAndIzinCount() async {
     for (final roomName in widget.roomAttendanceMap.keys) {
-      final attendanceDataMap = widget.roomAttendanceMap[roomName]!;
-      final absenceCount =
-          await getTotalAbsence(roomName, widget.employeeName, selectedDate);
-      final izinCount =
-          await getTotalIzin(roomName, widget.employeeName, selectedDate);
-      final hadirCount =
-          await getTotalHadir(roomName, widget.employeeName, selectedDate);
-      ;
+      try {
+        // Menghapus loop for dan mengganti dengan pemanggilan fungsi calculateAbsenceAndIzinCount() di luar loop
+        final absenceCount =
+            await getTotalAbsence(roomName, widget.employeeName, selectedDate);
+        final izinCount =
+            await getTotalIzin(roomName, widget.employeeName, selectedDate);
+        final hadirCount =
+            await getTotalHadir(roomName, widget.employeeName, selectedDate);
 
-      // Periksa apakah objek State masih terpasang sebelum pemanggilan setState()
-      if (mounted) {
-        setState(() {
-          absenceCountMap[roomName] = absenceCount;
-          izinCountMap[roomName] = izinCount;
-          hadirCountMap[roomName] = hadirCount;
-        });
+        // Periksa apakah objek State masih terpasang sebelum pemanggilan setState()
+        if (mounted) {
+          setState(() {
+            absenceCountMap[roomName] = absenceCount;
+            izinCountMap[roomName] = izinCount;
+            hadirCountMap[roomName] = hadirCount;
+          });
+        }
+      } catch (error) {
+        print('Error calculating absence and izin count: $error');
       }
     }
   }
@@ -248,30 +250,6 @@ class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
     return izinCount;
   }
 
-  Widget buildAttendanceButton(
-      String roomName, String employeeName, String status) {
-    return ElevatedButton(
-      onPressed: () => updateAttendance(roomName, employeeName, status),
-      child: Text(status),
-    );
-  }
-
-  void updateAttendance(String roomName, String employeeName, String status) {
-    final DocumentReference attendanceRef = FirebaseFirestore.instance
-        .collection('absen')
-        .doc('$roomName-$employeeName-${selectedDate.toString()}');
-
-    attendanceRef.update({'status': status}).then((value) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Attendance updated successfully')),
-      );
-    }).catchError((error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update attendance: $error')),
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final List<String> roomNames = widget.roomAttendanceMap.keys.toList();
@@ -304,14 +282,6 @@ class _AttendanceDetailPageState extends State<AttendanceDetailPage> {
                 Text('Total Kehadiran: $hadirCount'),
                 Text('Total Ketidakhadiran: $absenceCount'),
                 Text('Total Izin: $izinCount'),
-              ],
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                buildAttendanceButton(roomName, widget.employeeName, 'Hadir'),
-                buildAttendanceButton(roomName, widget.employeeName, 'Absen'),
-                buildAttendanceButton(roomName, widget.employeeName, 'Izin'),
               ],
             ),
           );
